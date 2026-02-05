@@ -120,17 +120,12 @@ export const walletApi = {
 export const merchantApi = {
   create: (data: { name: string; email: string; website?: string }) =>
     apiClient.post('/api/merchants', data),
+  getAll: () => apiClient.get("/api/merchants/"),
 };
-
 export const pgApi = {
   createOrder: (data: {
-    amount: number;
-    currency: string;
     orderId: string;
-    customerId: string;
-    customerPhone?: string;
-    customerEmail?: string;
-    callbackUrl: string;
-  }) =>
-    apiClient.post('/api/pg/orders', data),
+    amount: number;
+  }) => apiClient.post('/api/pg/orders', data),
 };
+

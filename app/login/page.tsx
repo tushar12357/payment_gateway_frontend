@@ -1,41 +1,49 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Wallet, Smartphone, Shield } from 'lucide-react';
-import { authApi } from '@/lib/api';
-import { toast } from 'react-toastify';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Wallet, Smartphone, Shield } from "lucide-react";
+import { authApi } from "@/lib/api";
+import { toast } from "react-toastify";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+  const [countryCode, setCountryCode] = useState("+91");
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (phone.length < 10) {
-      toast.error('Please enter a valid phone number');
+      toast.error("Please enter a valid phone number");
       return;
     }
 
     setIsLoading(true);
-    const response = await authApi.sendOtp(phone);
+    const fullPhone = `${countryCode}${phone}`;
+    const response = await authApi.sendOtp(fullPhone);
     setIsLoading(false);
 
     if (response.success) {
-      toast.success('OTP sent successfully');
-      setStep('otp');
+      toast.success("OTP sent successfully");
+      setStep("otp");
     } else {
-      toast.error(response.error || 'Failed to send OTP');
+      toast.error(response.error || "Failed to send OTP");
     }
   };
 
@@ -43,26 +51,27 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
+      toast.error("Please enter a valid 6-digit OTP");
       return;
     }
 
     setIsLoading(true);
-    const response = await authApi.verifyOtp(phone, otp);
+    const fullPhone = `${countryCode}${phone}`;
+    const response = await authApi.verifyOtp(fullPhone, otp);
     setIsLoading(false);
 
     if (response.success && response.data) {
-      toast.success('Login successful');
+      toast.success("Login successful");
       login(response.data.token, response.data.user);
-      router.push('/dashboard');
+      router.push("/dashboard");
     } else {
-      toast.error(response.error || 'Invalid OTP');
+      toast.error(response.error || "Invalid OTP");
     }
   };
 
   const handleBackToPhone = () => {
-    setStep('phone');
-    setOtp('');
+    setStep("phone");
+    setOtp("");
   };
 
   return (
@@ -73,7 +82,9 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 dark:bg-slate-100 mb-4">
               <Wallet className="w-8 h-8 text-white dark:text-slate-900" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome to PayGate</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome to PayGate
+            </h1>
             <p className="text-muted-foreground mt-2">
               Secure payments and wallet management
             </p>
@@ -82,39 +93,60 @@ export default function LoginPage() {
           <Card className="border-2 shadow-lg">
             <CardHeader>
               <CardTitle>
-                {step === 'phone' ? 'Sign In' : 'Verify OTP'}
+                {step === "phone" ? "Sign In" : "Verify OTP"}
               </CardTitle>
               <CardDescription>
-                {step === 'phone'
-                  ? 'Enter your phone number to receive an OTP'
+                {step === "phone"
+                  ? "Enter your phone number to receive an OTP"
                   : `Enter the 6-digit code sent to ${phone}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {step === 'phone' ? (
+              {step === "phone" ? (
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <div className="relative">
-                      <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="pl-10"
+
+                    <div className="flex gap-2">
+                      {/* Country Code */}
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
                         disabled={isLoading}
-                        autoFocus
-                      />
+                        className="h-10 rounded-md border bg-background px-3 text-sm"
+                      >
+                        <option value="+91">🇮🇳 +91</option>
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+44">🇬🇧 +44</option>
+                        <option value="+61">🇦🇺 +61</option>
+                      </select>
+
+                      {/* Phone Number */}
+                      <div className="relative flex-1">
+                        <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="Phone number"
+                          value={phone}
+                          onChange={(e) =>
+                            setPhone(
+                              e.target.value.replace(/\D/g, "").slice(0, 10),
+                            )
+                          }
+                          className="pl-10"
+                          disabled={isLoading}
+                        />
+                      </div>
                     </div>
                   </div>
+
                   <Button
                     type="submit"
                     className="w-full"
                     disabled={isLoading || phone.length < 10}
                   >
-                    {isLoading ? 'Sending...' : 'Send OTP'}
+                    {isLoading ? "Sending..." : "Send OTP"}
                   </Button>
                 </form>
               ) : (
@@ -126,7 +158,9 @@ export default function LoginPage() {
                       type="text"
                       placeholder="Enter 6-digit OTP"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
                       maxLength={6}
                       disabled={isLoading}
                       autoFocus
@@ -138,7 +172,7 @@ export default function LoginPage() {
                     className="w-full"
                     disabled={isLoading || otp.length !== 6}
                   >
-                    {isLoading ? 'Verifying...' : 'Verify OTP'}
+                    {isLoading ? "Verifying..." : "Verify OTP"}
                   </Button>
                   <Button
                     type="button"
@@ -183,7 +217,8 @@ export default function LoginPage() {
             The Modern Way to Manage Payments
           </h2>
           <p className="text-lg text-slate-300 mb-8">
-            Experience seamless transactions with our secure payment gateway and integrated wallet system.
+            Experience seamless transactions with our secure payment gateway and
+            integrated wallet system.
           </p>
           <div className="space-y-4">
             <div className="flex items-start gap-4">

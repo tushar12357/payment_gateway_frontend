@@ -1,13 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { merchantApi } from '@/lib/api';
-import { toast } from 'react-toastify';
-import { Store, Mail, Globe, Plus, Building2 } from 'lucide-react';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { merchantApi } from "@/lib/api";
+import { toast } from "react-toastify";
+import { Store, Globe, Plus, Building2, Copy, EyeOff, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,46 +21,68 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 export default function MerchantsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // ✅ aligned with backend
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    website: '',
+    name: "",
+    webhookUrl: "",
+    website: "", // UI-only (not sent)
   });
+  const [creds, setCreds] = useState<any>(null);
+  const [showCreds, setShowCreds] = useState(false);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [showSecret, setShowSecret] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMerchants();
+  }, []);
+
+  const fetchMerchants = async () => {
+    const res = await merchantApi.getAll();
+    setMerchants(res.data.data);
+  };
 
   const handleCreateMerchant = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('Please enter a valid email address');
+    if (!formData.name || !formData.webhookUrl) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
     setIsLoading(true);
-    const response = await merchantApi.create(formData);
-    setIsLoading(false);
 
-    if (response.success) {
-      toast.success('Merchant created successfully');
+    try {
+      await merchantApi.create({
+        name: formData.name,
+        webhookUrl: formData.webhookUrl,
+      });
+
+      toast.success("Merchant created");
+      await fetchMerchants();
+
       setIsOpen(false);
-      setFormData({ name: '', email: '', website: '' });
-    } else {
-      toast.error(response.error || 'Failed to create merchant');
+      setFormData({ name: "", webhookUrl: "", website: "" });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create merchant");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const copy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied");
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Merchants</h1>
@@ -62,6 +90,7 @@ export default function MerchantsPage() {
             Manage your merchant accounts and integrations
           </p>
         </div>
+
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -69,6 +98,7 @@ export default function MerchantsPage() {
               Add Merchant
             </Button>
           </DialogTrigger>
+
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Create New Merchant</DialogTitle>
@@ -76,7 +106,9 @@ export default function MerchantsPage() {
                 Add a new merchant to your payment gateway
               </DialogDescription>
             </DialogHeader>
+
             <form onSubmit={handleCreateMerchant} className="space-y-4 mt-4">
+              {/* Business Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">Business Name *</Label>
                 <div className="relative">
@@ -94,17 +126,18 @@ export default function MerchantsPage() {
                 </div>
               </div>
 
+              {/* Webhook URL (keeps same visual style) */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">Webhook URL *</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="merchant@example.com"
-                    value={formData.email}
+                    type="url"
+                    placeholder="https://merchant.com/webhook"
+                    value={formData.webhookUrl}
                     onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
+                      setFormData({ ...formData, webhookUrl: e.target.value })
                     }
                     className="pl-10"
                     disabled={isLoading}
@@ -112,6 +145,7 @@ export default function MerchantsPage() {
                 </div>
               </div>
 
+              {/* Website (UI only) */}
               <div className="space-y-2">
                 <Label htmlFor="website">Website (Optional)</Label>
                 <div className="relative">
@@ -140,12 +174,8 @@ export default function MerchantsPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  disabled={isLoading || !formData.name || !formData.email}
-                >
-                  {isLoading ? 'Creating...' : 'Create Merchant'}
+                <Button type="submit" className="flex-1" disabled={isLoading}>
+                  {isLoading ? "Creating..." : "Create Merchant"}
                 </Button>
               </div>
             </form>
@@ -153,24 +183,77 @@ export default function MerchantsPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-2 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
-              <Store className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold mb-2">No merchants yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create your first merchant to get started
-            </p>
-            <Button onClick={() => setIsOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Merchant
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Empty State */}
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {merchants.length === 0 ? (
+          <Card className="border-2 border-dashed">
+            <CardContent className="flex flex-col items-center py-12">
+              <Store className="w-8 h-8 mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No merchants yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          merchants.map((m) => (
+            <Card key={m._id}>
+              <CardHeader>
+                <CardTitle>{m.name}</CardTitle>
+                <CardDescription>{m.webhookUrl}</CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Status</span>
+                  <span className="capitalize text-green-600">{m.status}</span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span>API Key</span>
+                  <div className="flex items-center gap-2">
+                    <code className="truncate max-w-[120px]">
+                      {m.apiKey.slice(0, 10)}...
+                    </code>
+                    <Copy
+                      className="w-4 h-4 cursor-pointer"
+                      onClick={() => copy(m.apiKey)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span>API Secret</span>
+                  <div className="flex items-center gap-2">
+                    <code className="truncate max-w-[120px]">
+                      {showSecret === m._id
+                        ? m.apiSecret
+                        : "••••••••••"}
+                    </code>
+                    <button onClick={() =>
+                      setShowSecret(showSecret === m._id ? null : m._id)
+                    }>
+                      {showSecret === m._id ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                    <Copy
+                      className="w-4 h-4 cursor-pointer"
+                      onClick={() => copy(m.apiSecret)}
+                    />
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Created: {new Date(m.createdAt).toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
+
+      {/* Info Card */}
       <Card>
         <CardHeader>
           <CardTitle>What is a Merchant?</CardTitle>
@@ -186,8 +269,8 @@ export default function MerchantsPage() {
                 Merchant Account
               </h4>
               <p className="text-sm text-muted-foreground">
-                A merchant account allows businesses to accept payments through your payment gateway.
-                Each merchant gets unique credentials for API integration.
+                A merchant account allows businesses to accept payments through
+                your payment gateway. Each merchant gets unique API credentials.
               </p>
             </div>
             <div className="space-y-2">
@@ -196,8 +279,8 @@ export default function MerchantsPage() {
                 Integration
               </h4>
               <p className="text-sm text-muted-foreground">
-                Merchants can integrate with your payment gateway using API keys and webhooks
-                to process payments on their platforms.
+                Merchants integrate using API keys and webhooks to receive
+                payment events securely.
               </p>
             </div>
           </div>
