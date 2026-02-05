@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
 import { DollarSign, CreditCard, KeyRound, ShieldCheck } from "lucide-react";
 import { pgApi } from "@/lib/api";
-import crypto from "crypto-js";
 
 export default function PGPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -57,17 +56,14 @@ export default function PGPage() {
       amount: numAmount,
     };
 
-    const signature = crypto
-      .HmacSHA256(JSON.stringify(body), apiSecret)
-      .toString(crypto.enc.Hex);
-
+ 
     setIsLoading(true);
 
     try {
       const res = await pgApi.createOrder(body, {
         headers: {
           "x-api-key": apiKey,
-          "x-signature": signature,
+          "x-signature": apiSecret,
           "idempotency-key": idempotencyKey,
         },
       });
