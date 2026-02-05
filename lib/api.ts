@@ -1,5 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
+const API_BASE_URL ='https://payment-gateway-7a7f.onrender.com';
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
