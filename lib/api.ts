@@ -1,4 +1,4 @@
-const API_BASE_URL ='https://payment-gateway-7a7f.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -77,12 +77,18 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  }
+  async post<T>(
+  endpoint: string,
+  body?: any,
+  options?: RequestInit
+): Promise<ApiResponse<T>> {
+  return this.request<T>(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    ...options,
+  });
+}
+
 
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
@@ -123,9 +129,19 @@ export const merchantApi = {
   getAll: () => apiClient.get("/api/merchants/"),
 };
 export const pgApi = {
-  createOrder: (data: {
-    orderId: string;
-    amount: number;
-  }) => apiClient.post('/api/pg/orders', data),
+  createOrder: (
+    data: {
+      orderId: string;
+      amount: number;
+    },
+    config: {
+      headers: {
+        'x-api-key': string;
+        'x-signature': string;
+        'idempotency-key': string;
+      };
+    }
+  ) => {
+    return apiClient.post('/api/pg/orders', data, config);
+  },
 };
-
