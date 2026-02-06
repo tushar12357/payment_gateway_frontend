@@ -1,16 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { walletApi } from '@/lib/api';
 import { toast } from 'react-toastify';
-import { Wallet, ArrowUpRight, ArrowDownLeft, RefreshCw, TrendingUp } from 'lucide-react';
+import {
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
+  RefreshCw,
+  TrendingUp,
+} from 'lucide-react';
 import Link from 'next/link';
+
+type Transaction = {
+  _id: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  purpose: string;
+  status: string;
+  note?: string;
+  createdAt: string;
+};
 
 export default function DashboardPage() {
   const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [txLoading, setTxLoading] = useState(true);
 
   const fetchBalance = async () => {
     setIsLoading(true);
@@ -24,20 +48,33 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchTransactions = async () => {
+    setTxLoading(true);
+    const response = await walletApi.getTransactions({
+      limit: 5,
+      status: 'success',
+    });
+    setTxLoading(false);
+
+    if (response.success && response.data) {
+      setTransactions(response.data.transactions);
+    }
+  };
+
   useEffect(() => {
     fetchBalance();
+    fetchTransactions();
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      minimumFractionDigits: 2,
     }).format(amount);
-  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
+      {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-2">
@@ -45,11 +82,15 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {/* WALLET + ACTIONS */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* WALLET BALANCE */}
         <Card className="md:col-span-2 lg:col-span-3 border-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-medium">Wallet Balance</CardTitle>
+              <CardTitle className="text-base font-medium">
+                Wallet Balance
+              </CardTitle>
               <CardDescription>Your current available balance</CardDescription>
             </div>
             <Button
@@ -58,7 +99,9 @@ export default function DashboardPage() {
               onClick={fetchBalance}
               disabled={isLoading}
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
             </Button>
           </CardHeader>
           <CardContent>
@@ -82,38 +125,30 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+        {/* TOPUP */}
+        <Card className="border-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <ArrowUpRight className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <ArrowUpRight className="w-6 h-6 text-green-600" />
             </div>
             <CardTitle className="text-lg">Top Up Wallet</CardTitle>
-            <CardDescription>
-              Add money to your wallet using various payment methods
-            </CardDescription>
+            <CardDescription>Add money to your wallet</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/topup">
-              <Button className="w-full">
-                Add Money
-              </Button>
+              <Button className="w-full">Add Money</Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+        {/* TRANSFER */}
+        <Card className="border-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <ArrowDownLeft className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <ArrowDownLeft className="w-6 h-6 text-blue-600" />
             </div>
             <CardTitle className="text-lg">Send Money</CardTitle>
-            <CardDescription>
-              Transfer funds to other wallet users instantly
-            </CardDescription>
+            <CardDescription>Transfer funds instantly</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/transfer">
@@ -124,17 +159,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+        {/* PG */}
+        <Card className="border-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
+            <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-purple-600" />
             </div>
             <CardTitle className="text-lg">Payment Gateway</CardTitle>
-            <CardDescription>
-              Create payment orders for your merchants
-            </CardDescription>
+            <CardDescription>Create payment orders</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/pg">
@@ -146,17 +178,58 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* RECENT ACTIVITY */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Your latest transactions and updates</CardDescription>
+          <CardDescription>Your latest transactions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No recent activity</p>
-            <p className="text-sm mt-1">Your transactions will appear here</p>
-          </div>
+          {txLoading ? (
+            <div className="py-6 text-center text-muted-foreground">
+              Loading transactions...
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No recent activity</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((tx) => (
+                <div
+                  key={tx._id}
+                  className="flex items-center justify-between border rounded-lg p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    {tx.type === 'credit' ? (
+                      <ArrowUpRight className="text-green-600" />
+                    ) : (
+                      <ArrowDownLeft className="text-red-600" />
+                    )}
+                    <div>
+                      <p className="font-medium capitalize">
+                        {tx.purpose.replace('_', ' ')}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`font-semibold ${
+                      tx.type === 'credit'
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {tx.type === 'credit' ? '+' : '-'}
+                    {formatCurrency(tx.amount)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

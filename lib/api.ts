@@ -1,4 +1,5 @@
-const API_BASE_URL ='https://payment-gateway-7a7f.onrender.com';
+// const API_BASE_URL ='https://payment-gateway-7a7f.onrender.com';
+const API_BASE_URL ='http://localhost:3000';
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -114,6 +115,8 @@ export const authApi = {
 export const walletApi = {
   getBalance: () =>
     apiClient.get<{ balance: number }>('/api/wallet/balance'),
+   getTransactions: (params?: any) =>
+    apiClient.get('/api/wallet/transactions', { params }),
 
   topup: (amount: number) =>
     apiClient.post<{ orderId: string; amount: number }>('/api/wallet/topup', { amount }),
