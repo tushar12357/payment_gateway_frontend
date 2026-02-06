@@ -86,7 +86,7 @@ export default function DashboardLayout({
               <div className="p-4 border-t border-slate-200 dark:border-slate-700">
                 <div className="mb-3 px-2">
                   <p className="text-xs text-muted-foreground">Signed in as</p>
-                  <p className="text-sm font-medium truncate">{user?.phone}</p>
+                  <p className="text-sm font-medium truncate">{user?.phone!=="0" ? user?.phone : user?.email}</p>
                 </div>
                 <Button
                   variant="outline"

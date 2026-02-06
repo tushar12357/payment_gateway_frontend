@@ -106,11 +106,24 @@ export const apiClient = new ApiClient(API_BASE_URL);
 
 export const authApi = {
   sendOtp: (phone: string) =>
-    apiClient.post('/api/auth/send-otp', { phone }),
+    apiClient.post("/api/auth/send-otp", { phone }),
 
   verifyOtp: (phone: string, otp: string) =>
-    apiClient.post<{ token: string; user: any }>('/api/auth/verify-otp', { phone, otp }),
+    apiClient.post<{ token: string; user: any }>(
+      "/api/auth/verify-otp",
+      { phone, otp }
+    ),
+
+  sendEmailOtp: (email: string) =>
+    apiClient.post("/api/auth/send-email-otp", { email }),
+
+  verifyEmailOtp: (email: string, otp: string) =>
+    apiClient.post<{ token: string; user: any }>(
+      "/api/auth/verify-email-otp",
+      { email, otp }
+    ),
 };
+
 
 export const walletApi = {
   getBalance: () =>

@@ -12,72 +12,117 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Wallet, Smartphone, Shield } from "lucide-react";
+import { Wallet, Smartphone, Shield, Mail } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { toast } from "react-toastify";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+
+  // 🔹 Login method
+  const [method, setMethod] = useState<"email" | "phone">("email");
+
+  // 🔹 Inputs
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
 
+  // 🔹 UI state
+  const [step, setStep] = useState<"identifier" | "otp">("identifier");
+  const [isLoading, setIsLoading] = useState(false);
+
+  /* ================= SEND OTP ================= */
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (phone.length < 10) {
-      toast.error("Please enter a valid phone number");
-      return;
-    }
-
     setIsLoading(true);
-    const fullPhone = `${countryCode}${phone}`;
-    const response = await authApi.sendOtp(fullPhone);
-    setIsLoading(false);
 
-    if (response.success) {
-      toast.success("OTP sent successfully");
-      setStep("otp");
-    } else {
-      toast.error(response.error || "Failed to send OTP");
+    let response;
+
+    try {
+      if (method === "email") {
+        if (!email || !email.includes("@")) {
+          toast.error("Enter a valid email");
+          setIsLoading(false);
+          return;
+        }
+
+        response = await authApi.sendEmailOtp(email);
+      } else {
+        if (phone.length < 10) {
+          toast.error("Enter valid phone number");
+          setIsLoading(false);
+          return;
+        }
+
+        response = await authApi.sendOtp(`${countryCode}${phone}`);
+      }
+
+      if (response.success) {
+        toast.success("OTP sent successfully");
+        setStep("otp");
+      } else {
+        toast.error(response.error || "Failed to send OTP");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  /* ================= VERIFY OTP ================= */
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (otp.length !== 6) {
-      toast.error("Please enter a valid 6-digit OTP");
+      toast.error("Enter valid 6-digit OTP");
       return;
     }
 
     setIsLoading(true);
-    const fullPhone = `${countryCode}${phone}`;
-    const response = await authApi.verifyOtp(fullPhone, otp);
-    setIsLoading(false);
 
-    if (response.success && response.data) {
-      toast.success("Login successful");
-      login(response.data.token, response.data.user);
-      router.push("/dashboard");
-    } else {
-      toast.error(response.error || "Invalid OTP");
+    let response;
+
+    try {
+      if (method === "email") {
+        response = await authApi.verifyEmailOtp(email, otp);
+      } else {
+        response = await authApi.verifyOtp(
+          `${countryCode}${phone}`,
+          otp
+        );
+      }
+
+      if (response.success && response.data) {
+        toast.success("Login successful");
+        login(response.data.token, response.data.user);
+        router.push("/dashboard");
+      } else {
+        toast.error(response.error || "Invalid OTP");
+      }
+    } catch {
+      toast.error("OTP verification failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleBackToPhone = () => {
-    setStep("phone");
+  const reset = () => {
+    setStep("identifier");
     setOtp("");
   };
 
   return (
     <div className="min-h-screen flex">
+      {/* LEFT */}
       <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <div className="w-full max-w-md">
+
+          {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 dark:bg-slate-100 mb-4">
               <Wallet className="w-8 h-8 text-white dark:text-slate-900" />
@@ -90,173 +135,143 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Card */}
           <Card className="border-2 shadow-lg">
             <CardHeader>
               <CardTitle>
-                {step === "phone" ? "Sign In" : "Verify OTP"}
+                {step === "identifier" ? "Sign In" : "Verify OTP"}
               </CardTitle>
               <CardDescription>
-                {step === "phone"
-                  ? "Enter your phone number to receive an OTP"
-                  : `Enter the 6-digit code sent to ${phone}`}
+                {step === "identifier"
+                  ? "Login using email or phone number"
+                  : "Enter the 6-digit OTP"}
               </CardDescription>
             </CardHeader>
+
             <CardContent>
-              {step === "phone" ? (
+              {/* Toggle */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <Button
+                  type="button"
+                  variant={method === "email" ? "default" : "outline"}
+                  onClick={() => setMethod("email")}
+                >
+                  <Mail className="w-4 h-4 mr-2" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={method === "phone" ? "default" : "outline"}
+                  onClick={() => setMethod("phone")}
+                >
+                  <Smartphone className="w-4 h-4 mr-2" /> Phone
+                </Button>
+              </div>
+
+              {/* STEP 1 */}
+              {step === "identifier" ? (
                 <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-
-                    <div className="flex gap-2">
-                      {/* Country Code */}
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
+                  {method === "email" ? (
+                    <>
+                      <Label>Email Address</Label>
+                      <Input
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         disabled={isLoading}
-                        className="h-10 rounded-md border bg-background px-3 text-sm"
-                      >
-                        <option value="+91">🇮🇳 +91</option>
-                        <option value="+1">🇺🇸 +1</option>
-                        <option value="+44">🇬🇧 +44</option>
-                        <option value="+61">🇦🇺 +61</option>
-                      </select>
-
-                      {/* Phone Number */}
-                      <div className="relative flex-1">
-                        <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label>Phone Number</Label>
+                      <div className="flex gap-2">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="h-10 rounded-md border px-3"
+                        >
+                          <option value="+91">🇮🇳 +91</option>
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                        </select>
                         <Input
-                          id="phone"
                           type="tel"
                           placeholder="Phone number"
                           value={phone}
                           onChange={(e) =>
                             setPhone(
-                              e.target.value.replace(/\D/g, "").slice(0, 10),
+                              e.target.value.replace(/\D/g, "").slice(0, 10)
                             )
                           }
-                          className="pl-10"
-                          disabled={isLoading}
                         />
                       </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading || phone.length < 10}
-                  >
+                  <Button className="w-full" disabled={isLoading}>
                     {isLoading ? "Sending..." : "Send OTP"}
                   </Button>
                 </form>
               ) : (
+                /* STEP 2 */
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="otp">OTP Code</Label>
-                    <Input
-                      id="otp"
-                      type="text"
-                      placeholder="Enter 6-digit OTP"
-                      value={otp}
-                      onChange={(e) =>
-                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                      }
-                      maxLength={6}
-                      disabled={isLoading}
-                      autoFocus
-                      className="text-center text-2xl tracking-widest"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading || otp.length !== 6}
-                  >
+                  <Label>OTP</Label>
+                  <Input
+                    type="text"
+                    value={otp}
+                    maxLength={6}
+                    autoFocus
+                    className="text-center text-2xl tracking-widest"
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, ""))
+                    }
+                  />
+                  <Button className="w-full" disabled={isLoading}>
                     {isLoading ? "Verifying..." : "Verify OTP"}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     className="w-full"
-                    onClick={handleBackToPhone}
-                    disabled={isLoading}
+                    onClick={reset}
                   >
-                    Change Phone Number
+                    Change {method === "email" ? "Email" : "Phone"}
                   </Button>
                 </form>
               )}
             </CardContent>
           </Card>
-
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 mb-2">
-                <Shield className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-              </div>
-              <p className="text-xs text-muted-foreground">Secure</p>
-            </div>
-            <div>
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 mb-2">
-                <Wallet className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-              </div>
-              <p className="text-xs text-muted-foreground">Fast</p>
-            </div>
-            <div>
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 mb-2">
-                <Smartphone className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-              </div>
-              <p className="text-xs text-muted-foreground">Simple</p>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="hidden lg:flex flex-1 bg-slate-900 dark:bg-slate-950 items-center justify-center p-12">
+      {/* RIGHT */}
+      <div className="hidden lg:flex flex-1 bg-slate-900 items-center justify-center p-12">
         <div className="max-w-lg text-white">
           <h2 className="text-4xl font-bold mb-6">
             The Modern Way to Manage Payments
           </h2>
           <p className="text-lg text-slate-300 mb-8">
-            Experience seamless transactions with our secure payment gateway and
-            integrated wallet system.
+            Seamless transactions with secure authentication
           </p>
           <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Bank-Level Security</h3>
-                <p className="text-sm text-slate-400">
-                  Your data is protected with enterprise-grade encryption
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
-                <Wallet className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Instant Transfers</h3>
-                <p className="text-sm text-slate-400">
-                  Send and receive money in seconds
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
-                <Smartphone className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Easy Integration</h3>
-                <p className="text-sm text-slate-400">
-                  Simple API for merchants and developers
-                </p>
-              </div>
-            </div>
+            <Feature icon={Shield} title="Bank-Level Security" />
+            <Feature icon={Wallet} title="Instant Wallet Creation" />
+            <Feature icon={Smartphone} title="Email & Phone Login" />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* Feature Item */
+function Feature({ icon: Icon, title }: any) {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+        <Icon className="w-4 h-4" />
+      </div>
+      <p className="text-sm text-slate-300">{title}</p>
     </div>
   );
 }
