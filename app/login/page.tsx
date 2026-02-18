@@ -385,9 +385,7 @@ export default function LoginPage() {
                 <Button className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
-                <Button className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
+               
 
                 <p className="text-center text-sm text-muted-foreground mt-4">
                   Don’t have an account?{" "}
