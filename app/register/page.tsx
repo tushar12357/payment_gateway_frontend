@@ -49,14 +49,11 @@ export default function RegisterPage() {
 
     try {
       const response = await authApi.register(email, password);
-
-      if (response.success && response.data) {
+        
         toast.success("Account created successfully");
-        login(response.data.token, response.data.user);
+        login(response.token, response.user);
         router.push("/dashboard");
-      } else {
-        toast.error(response.error || "Registration failed");
-      }
+      
     } catch {
       toast.error("Something went wrong");
     } finally {

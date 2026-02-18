@@ -317,13 +317,10 @@ export default function LoginPage() {
     try {
       const response = await authApi.login(email, password);
 
-      if (response.success && response.data) {
         toast.success("Login successful");
-        login(response.data.token, response.data.user);
+        login(response.token, response.user);
         router.push("/dashboard");
-      } else {
-        toast.error(response.error || "Invalid credentials");
-      }
+     
     } catch {
       toast.error("Login failed");
     } finally {
