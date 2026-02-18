@@ -122,6 +122,15 @@ export const authApi = {
       "/api/auth/verify-email-otp",
       { email, otp }
     ),
+    register: async (email: string, password: string) => {
+  const res = await apiClient.post("/auth/register", { email, password });
+  return res.data;
+},
+    login: async (email: string, password: string) => {
+  const res = await apiClient.post("/auth/login", { email, password });
+  return res.data;
+},
+
 };
 
 
