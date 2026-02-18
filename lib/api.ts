@@ -123,11 +123,11 @@ export const authApi = {
       { email, otp }
     ),
     register: async (email: string, password: string) => {
-  const res = await apiClient.post("/auth/register", { email, password });
+  const res = await apiClient.post("/api/auth/register", { email, password });
   return res.data;
 },
     login: async (email: string, password: string) => {
-  const res = await apiClient.post("/auth/login", { email, password });
+  const res = await apiClient.post("/api/auth/login", { email, password });
   return res.data;
 },
 
